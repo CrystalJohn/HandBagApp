@@ -12,7 +12,7 @@ interface HandbagCardProps {
 export const HandbagCard: React.FC<HandbagCardProps> = ({ item, onPress }) => {
   const { handbagName, cost, uri, percentOff, brand, gender } = item;
   
-  // Calculate final price based on discount
+  // Calculate final price based on discount 
   const finalPrice = cost * (1 - percentOff);
 
   const isFavorite = useFavoriteStore((state) => state.favorites.some(fav => fav.id === item.id));
@@ -28,6 +28,13 @@ export const HandbagCard: React.FC<HandbagCardProps> = ({ item, onPress }) => {
     >
       <Image source={{ uri }} style={styles.image} resizeMode="cover" />
       
+      {/* 🚀 BAGE GIẢM GIÁ (UX: CHỒNG LÊN HÌNH) */}
+      {percentOff > 0 && (
+        <View style={styles.discountOverlay}>
+          <Text style={styles.discountOverlayText}>-{(percentOff * 100).toFixed(0)}%</Text>
+        </View>
+      )}
+
       <Pressable 
         style={styles.favoriteButton} 
         onPress={() => toggleFavorite(item)}
@@ -117,6 +124,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#aaa',
     textDecorationLine: 'line-through',
+    marginRight: 6,
+  },
+  discountOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#d32f2f', // Đỏ rực
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+  discountOverlayText: {
+    color: '#ffffff', // Chữ trắng nổi bật
+    fontWeight: '900', // Đậm nhất
+    fontSize: 12,
   },
   favoriteButton: {
     position: 'absolute',

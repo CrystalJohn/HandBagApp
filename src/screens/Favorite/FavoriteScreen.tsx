@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 
 // Imports
 import { useFavoriteStore } from '../../store/useFavoriteStore';
@@ -24,6 +25,17 @@ export default function FavoriteScreen() {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]); // reset selection
   };
+  
+  // RESET TRẠNG THÁI KHI RỜI KHỎI MÀN HÌNH
+  useFocusEffect(
+    useCallback(() => {
+      // Khi màn hình blur (mất focus), hàm cleanup này sẽ chạy
+      return () => {
+        setIsSelectionMode(false);
+        setSelectedIds([]);
+      };
+    }, [])
+  );
 
   const toggleItemSelection = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -63,6 +75,17 @@ export default function FavoriteScreen() {
     );
   };
 
+  const isAllSelected = selectedIds.length === favorites.length;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]); // Bỏ chọn hết
+    } else {
+      const allIds = favorites.map(item => item.id);
+      setSelectedIds(allIds); // Chọn hết
+    }
+  };
+
   // NẾU TRỐNG
   if (favorites.length === 0) {
     return (
@@ -77,35 +100,38 @@ export default function FavoriteScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Favorites ({favorites.length})</Text>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {isSelectionMode ? (
-            <>
-              {selectedIds.length > 0 && (
-                <Pressable onPress={handleBulkDelete} style={styles.deleteBtn}>
-                  <Text style={styles.deleteBtnText}>Delete ({selectedIds.length})</Text>
+        {isSelectionMode ? (
+          <>
+            <View style={styles.headerSelectionLeft}>
+              <Pressable onPress={toggleSelectionMode} style={styles.cancelIconBtn}>
+                <Ionicons name="close" size={24} color="#333" />
+              </Pressable>
+              <Text style={styles.headerSelectionText}>
+                {selectedIds.length > 0 ? `${selectedIds.length} Selected` : 'Select Items'}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.title}>My Favorites ({favorites.length})</Text>
+            <View style={styles.headerNormalRight}>
+              <Pressable onPress={handleClearAll} style={styles.iconBtn}>
+                <Ionicons name="trash-outline" size={22} color="#757575" />
+              </Pressable>
+              {favorites.length >= 3 && (
+                <Pressable onPress={toggleSelectionMode} style={styles.selectBtn}>
+                  <Text style={styles.selectBtnText}>Select</Text>
                 </Pressable>
               )}
-              <Pressable onPress={toggleSelectionMode} style={styles.cancelBtn}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={toggleSelectionMode} style={styles.selectBtn}>
-                <Text style={styles.selectBtnText}>Select</Text>
-              </Pressable>
-              <Pressable onPress={handleClearAll} style={styles.clearBtn}>
-                <Text style={styles.clearBtnText}>Clear All</Text>
-              </Pressable>
-            </>
-          )}
-        </View>
+            </View>
+          </>
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
         <FlashList
           data={favorites}
+          // @ts-ignore - FlashList is incorrectly picking up FlatList types in this env
           estimatedItemSize={250}
           renderItem={({ item }) => {
             const isSelected = selectedIds.includes(item.id);
@@ -135,9 +161,35 @@ export default function FavoriteScreen() {
               </View>
             );
           }}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: isSelectionMode ? 100 : 16 }}
         />
       </View>
+
+      {/* 🚀 FLOATING BOTTOM ACTION BAR CHO CHẾ ĐỘ SELECTION */}
+      {isSelectionMode && (
+        <View style={styles.bottomActionBar}>
+          <Pressable onPress={handleToggleSelectAll} style={styles.bottomSelectAllBtn}>
+            <Ionicons 
+              name={isAllSelected ? "checkmark-circle" : "ellipse-outline"} 
+              size={22} 
+              color={isAllSelected ? "#e91e63" : "#757575"} 
+            />
+            <Text style={[styles.bottomSelectAllText, isAllSelected && { color: '#e91e63' }]}>
+              All
+            </Text>
+          </Pressable>
+
+          <Pressable 
+            style={[styles.bottomDeleteBtn, selectedIds.length === 0 && styles.bottomDeleteBtnDisabled]}
+            disabled={selectedIds.length === 0}
+            onPress={handleBulkDelete}
+          >
+            <Text style={styles.bottomDeleteBtnText}>
+              Delete {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -151,24 +203,47 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
-    paddingBottom: 10 
+    paddingBottom: 10,
+    minHeight: 44,
   },
-  title: { fontSize: 22, fontWeight: 'bold' },
-  clearBtn: { padding: 8, backgroundColor: '#ffebee', borderRadius: 8 },
-  clearBtnText: { color: '#d32f2f', fontWeight: 'bold' },
-  deleteBtn: { padding: 8, backgroundColor: '#e91e63', borderRadius: 8 },
-  deleteBtnText: { color: '#ffffff', fontWeight: 'bold' },
-  cancelBtn: { padding: 8, backgroundColor: '#e0e0e0', borderRadius: 8 },
-  cancelBtnText: { color: '#333333', fontWeight: 'bold' },
-  selectBtn: { padding: 8, backgroundColor: '#e3f2fd', borderRadius: 8 },
-  selectBtnText: { color: '#1976d2', fontWeight: 'bold' },
+  headerSelectionLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerSelectionText: { fontSize: 20, fontWeight: 'bold', marginLeft: 16 },
+  headerNormalRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  title: { fontSize: 24, fontWeight: '800', color: '#111' },
+  
+  iconBtn: { padding: 4 },
+  cancelIconBtn: { padding: 4, backgroundColor: '#f0f0f0', borderRadius: 20 },
+  
+  selectBtn: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: '#e3f2fd', borderRadius: 20 },
+  selectBtnText: { color: '#1976d2', fontWeight: 'bold', fontSize: 14 },
+  
   checkbox: { 
-    position: 'absolute', top: 20, right: 20, 
+    position: 'absolute', top: 20, left: 20, // Move to left for easier thumb access when scrolling
     width: 28, height: 28, borderRadius: 14, 
     borderWidth: 2, borderColor: '#fff', 
     backgroundColor: 'rgba(0,0,0,0.3)', 
     justifyContent: 'center', alignItems: 'center',
     zIndex: 10, elevation: 5 
   },
-  checkboxSelected: { backgroundColor: '#e91e63', borderColor: '#e91e63' }
+  checkboxSelected: { backgroundColor: '#e91e63', borderColor: '#e91e63' },
+
+  // Bottom Floating Action Bar
+  bottomActionBar: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 30, // SafeArea spacing
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1, borderTopColor: '#f0f0f0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 15,
+  },
+  bottomSelectAllBtn: { flexDirection: 'row', alignItems: 'center' },
+  bottomSelectAllText: { fontSize: 16, fontWeight: '600', color: '#757575', marginLeft: 8 },
+  bottomDeleteBtn: { backgroundColor: '#e91e63', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24 },
+  bottomDeleteBtnDisabled: { backgroundColor: '#ffcdd2' },
+  bottomDeleteBtnText: { color: 'white', fontWeight: '800', fontSize: 16 },
 });

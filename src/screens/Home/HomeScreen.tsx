@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Button, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
-import { CompositeScreenProps } from '@react-navigation/native';
+import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 
 import { useHandbags } from '../../hooks/useHandbags';
 import { HandbagCard } from './components/HandbagCard';
@@ -27,6 +28,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Custom Hooks cho Avatar (sử dụng React Native Image Picker)
   const { avatarUri, updateAvatar } = useProfileStore();
   const { pickImage } = useImagePicker();
+
+  // RESET STATE KHI RỜI KHỎI MÀN HÌNH (BLUR)
+  useFocusEffect(
+    useCallback(() => {
+      // Hàm cleanup này sẽ chạy khi màn hình mất focus (chuyển qua tab khác)
+      return () => {
+        setSearchQuery('');
+        setSelectedBrand('All');
+      };
+    }, [])
+  );
 
   const handleSelectAvatar = async () => {
     const uri = await pickImage();
@@ -62,6 +74,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     return [...result].sort((a, b) => b.cost - a.cost);
   }, [data, selectedBrand, searchQuery]);   // đưa search Query vào dependency array để khi user gõ làm đổi searchQuery thì mảng sẽ tự động co lại
 
+  // hàm callback để render item tương ứng khi user click vào card
   const renderItem = ({ item }: { item: Handbag }) => (
     <HandbagCard 
       item={item} 
