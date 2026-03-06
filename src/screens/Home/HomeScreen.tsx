@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Button, ScrollView, Pressable } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Button, ScrollView, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { useHandbags } from '../hooks/useHandbags';
-import { HandbagCard } from './Home/components/HandbagCard';
-import { BottomTabParamList, RootStackParamList } from '../types/navigation';
-import { Handbag } from '../types';
-import { SearchBar } from '../components/SearchBar';
+import { useHandbags } from '../../hooks/useHandbags';
+import { HandbagCard } from './components/HandbagCard';
+import { BottomTabParamList, RootStackParamList } from '../../types/navigation';
+import { Handbag } from '../../types';
+import { SearchBar } from '../../components/SearchBar';
+import { useProfileStore } from '../../store/useProfileStore';
+import { useImagePicker } from '../../hooks/useImagePicker';
 
 type HomeScreenProps = CompositeScreenProps<
   BottomTabScreenProps<BottomTabParamList, 'Home'>,
@@ -21,6 +23,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { data, isLoading, isError, error, refetch } = useHandbags();
   const [selectedBrand, setSelectedBrand] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Custom Hooks cho Avatar (sử dụng React Native Image Picker)
+  const { avatarUri, updateAvatar } = useProfileStore();
+  const { pickImage } = useImagePicker();
+
+  const handleSelectAvatar = async () => {
+    const uri = await pickImage();
+    if (uri) {
+      updateAvatar(uri);
+    }
+  };
 
   // Khôi phục mảng unique brands từ data
   const brands = useMemo(() => {
@@ -76,13 +89,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* Thanh Search */}
-      <SearchBar 
-        value={searchQuery} 
-        onChangeText={setSearchQuery} 
-        placeholder="Tìm kiếm túi xách theo tên..." 
-      />
-      {/* Horizontal Filter Bar */}
+      {/* 🚀 HEADER MỚI XINH HƠN ĐỂ CHE KHẢO TRẮNG */}
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.welcomeText}>Hello, Fashionista! 👋</Text>
+          <Text style={styles.headerTitle}>Find your Perfect Bag</Text>
+        </View>
+        <Pressable style={styles.profileBtn} onPress={handleSelectAvatar}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.profileAvatar}>👤</Text>
+          )}
+        </Pressable>
+      </View>
+
+      {/* Thanh Search (Giờ đã được bo tròn hoàn toàn từ SearchBar component) */}
+      <View style={styles.searchContainer}>
+        <SearchBar 
+          value={searchQuery} 
+          onChangeText={setSearchQuery} 
+          placeholder="Tìm kiếm túi xách theo tên..." 
+        />
+      </View>
       <View>
         <ScrollView 
           horizontal 
@@ -126,9 +155,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9f9f9' },
+  container: { flex: 1, backgroundColor: '#ffffff' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { color: 'red', marginBottom: 10 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12, // Cách an toàn với chóp tai thỏ
+    paddingBottom: 4,
+  },
+  welcomeText: { color: '#757575', fontSize: 14, marginBottom: 4 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#212121' },
+  profileBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#ffebee',
+    justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden', // Quan trọng để bo tròn Image bên trong
+  },
+  profileAvatar: { fontSize: 20 },
+  avatarImage: { width: '100%', height: '100%' },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginVertical: 12,
+  },
   filterContainer: {
     paddingVertical: 12,
     paddingHorizontal: 16,

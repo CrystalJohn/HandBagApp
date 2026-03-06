@@ -34,10 +34,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f1f1f1',
-    borderRadius: 12,
+    borderRadius: 30, // Bo tròn hoàn toàn giống thanh search của Google/Shopee
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginVertical: 12,
+    paddingVertical: 14,
   },
   icon: {
     marginRight: 10,

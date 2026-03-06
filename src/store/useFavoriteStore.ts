@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Handbag } from '../types'; // Nhớ import đúng đường dẫn interface của em
+import { Handbag } from '../types';
 
 interface FavoriteState {
   favorites: Handbag[];
   toggleFavorite: (item: Handbag) => void;
   removeFavorite: (id: string) => void;
+  removeFavorites: (ids: string[]) => void;
   clearAll: () => void;
 }
 
@@ -32,6 +33,11 @@ export const useFavoriteStore = create<FavoriteState>()(
       // Hàm xóa 1 item (Dùng cho màn Favorite)
       removeFavorite: (id) => {
         set({ favorites: get().favorites.filter((fav) => fav.id !== id) });
+      },
+
+      // Hàm xóa nhiều item (Bulk delete)
+      removeFavorites: (ids) => {
+        set({ favorites: get().favorites.filter((fav) => !ids.includes(fav.id)) });
       },
 
       // Hàm xóa tất cả (Clear All)

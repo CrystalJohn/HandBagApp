@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'; // Thư viện icon xịn của E
 import { RootStackParamList, BottomTabParamList } from '../types/navigation';
 
 // Import Screens
-import HomeScreen from '../screens/HomeScreen';
+import HomeScreen from '../screens/Home/HomeScreen';
 import FavoriteScreen from '../screens/Favorite/FavoriteScreen';
 import DetailScreen from '../screens/Detail/DetailScreen';
 

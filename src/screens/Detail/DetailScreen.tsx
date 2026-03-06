@@ -14,17 +14,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Detail'>;
 
 const { width } = Dimensions.get('window');
 
-// 1. MOCK DATA MỚI: Tập trung vào các review 1 Sao và 2 Sao
+// 1. MOCK DATA: Chứa cả review Tích cực và Tiêu cực
 const generateMockReviews = (id: string) => {
   const baseReviews = [
     { id: 'r1', user: 'AngryBuyer99', rating: 1, comment: 'Chất lượng da quá tệ, bong tróc chỉ sau 1 tuần sử dụng! Đừng mua!' },
-    { id: 'r2', user: 'SadCustomer', rating: 1, comment: 'Màu thực tế sai hoàn toàn so với hình ảnh. Rất thất vọng.' },
-    { id: 'r3', user: 'JohnDoe', rating: 2, comment: 'Đóng gói cẩu thả, túi bị móp khi giao đến.' },
-    { id: 'r4', user: 'Alice', rating: 4, comment: 'Khá ổn, nhưng khóa kéo hơi rít.' },
-    { id: 'r5', user: 'Emma', rating: 5, comment: 'Tuyệt vời, mình rất thích.' },
+    { id: 'r2', user: 'Emma.Style', rating: 5, comment: 'Túi ở ngoài đẹp hơn trong hình nhiều! Rất xịn xò. Đáng tiền 😍' },
+    { id: 'r3', user: 'SadCustomer', rating: 2, comment: 'Màu thực tế sai hoàn toàn so với hình ảnh. Khá thất vọng.' },
+    { id: 'r4', user: 'ThuHoa_HCMC', rating: 5, comment: 'Đã mua cái thứ 3 rồi, chưa bao giờ làm mình thất vọng!' },
+    { id: 'r5', user: 'NgocTran.Fashion', rating: 4, comment: 'Túi form cứng cáp, màu okela nhưng dây đeo hơi dài.' },
   ];
-  const count = (parseInt(id) % 3) + 3; // Lấy 3-5 review
-  return baseReviews.slice(0, count);
+  return baseReviews; // Trả về toàn bộ để thấy rõ cả 2 loại
 };
 
 export default function DetailScreen({ route, navigation }: Props) {
@@ -33,6 +32,13 @@ export default function DetailScreen({ route, navigation }: Props) {
   const isFavorite = favorites.some((fav) => fav.id === handbag.id);
 
   const reviews = useMemo(() => generateMockReviews(handbag.id), [handbag.id]);
+
+  // useMemo & reduce để tính toán rating trung bình
+  const averageRating = useMemo(() => {
+    if (reviews.length === 0) return 0;
+    const sum = reviews.reduce((acc, current) => acc + current.rating, 0);
+    return (sum / reviews.length).toFixed(1);
+  }, [reviews]);
 
   // --- LOGIC ANIMATION CHO "SMALL TAB" (SNACKBAR) ---
   const slideAnim = useRef(new Animated.Value(100)).current; // 100 là vị trí ẩn dưới đáy
@@ -60,6 +66,7 @@ export default function DetailScreen({ route, navigation }: Props) {
     ]).start();
   };
 
+  // --- LOGIC YÊU THÍCH ---
   const handleToggleFavorite = () => {
     toggleFavorite(handbag); // Gọi Zustand
     
@@ -91,39 +98,79 @@ export default function DetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
 
-        {/* THÔNG TIN COMPACT (LƯỢC BỎ GIÁ CẢ DÀI DÒNG) */}
-        <View style={styles.infoSection}>
-          <Text style={styles.brand}>{handbag.brand}</Text>
+        {/* PRODUCT DETAILS CARD */}
+        <View style={styles.detailsCard}>
+          {/* Price Section */}
+          <View style={styles.priceContainer}>
+            <Text style={styles.finalPrice}>
+              ${(handbag.cost * (1 - handbag.percentOff)).toFixed(2)}
+            </Text>
+            {handbag.percentOff > 0 && (
+              <>
+                <Text style={styles.originalPrice}>${handbag.cost.toFixed(2)}</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>-{(handbag.percentOff * 100).toFixed(0)}%</Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Name & Brand */}
           <Text style={styles.title}>{handbag.handbagName}</Text>
-          {/* Chỉ hiện 1 dòng giá nhỏ gọn */}
-          <Text style={styles.compactPrice}>Price: ${(handbag.cost * (1 - handbag.percentOff)).toFixed(2)}</Text>
+          <Text style={styles.brand}>{handbag.brand} • {handbag.category}</Text>
         </View>
 
-        {/* KHU VỰC FEEDBACK - ĐẢO NGƯỢC: 1 SAO LÊN ĐẦU */}
+        {/* KHU VỰC FEEDBACK - Ưu tiên hiện Tiêu Cực 1-2 sao trước */}
         <View style={styles.feedbackSection}>
-          <Text style={styles.feedbackTitle}>⚠️ Critical Reviews (Tiêu cực)</Text>
-          <Text style={styles.feedbackSub}>Những đánh giá 1 sao cần lưu ý trước khi mua</Text>
+          <View style={styles.feedbackHeaderRow}>
+            <View style={styles.averageRatingBox}>
+              <Text style={styles.averageRatingText}>{averageRating}</Text>
+              <Text style={styles.averageRatingMax}>/5</Text>
+              <Ionicons name="star" size={18} color="#FFD700" style={{ marginLeft: 4 }} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.feedbackTitle}>Customer Reviews</Text>
+              <Text style={styles.feedbackSub}>dựa trên {reviews.length} đánh giá</Text>
+            </View>
+          </View>
           
-          {/* Duyệt mảng từ 1 SAO ĐẾN 5 SAO (Ưu tiên hiển thị mảng 1 sao trước) */}
+          {/* Duyệt mảng từ 1 SAO đến 5 SAO (Ưu tiên hiển thị mảng 1 sao trước để thấy lỗi) */}
           {[1, 2, 3, 4, 5].map((starRating) => {
             const starReviews = reviews.filter(r => r.rating === starRating);
             if (starReviews.length === 0) return null; 
 
-            // Highlight màu đỏ cho 1 và 2 sao
+            // Cả 2 trạng thái: Màu xanh cho Tích cực (>=4), Màu đỏ cho Tiêu cực (<=2)
+            const isPositive = starRating >= 4;
             const isCritical = starRating <= 2;
 
             return (
               <View key={starRating} style={styles.ratingGroup}>
-                <View style={[styles.starHeader, isCritical && styles.criticalHeader]}>
-                  <Text style={[styles.starHeaderText, isCritical && { color: '#d32f2f' }]}>
+                <View style={[
+                  styles.starHeader, 
+                  isPositive && styles.positiveHeader,
+                  isCritical && styles.criticalHeader
+                ]}>
+                  <Text style={[
+                    styles.starHeaderText, 
+                    isPositive && { color: '#2e7d32' },
+                    isCritical && { color: '#d32f2f' }
+                  ]}>
                     {starRating}
                   </Text>
-                  <Ionicons name="star" size={16} color={isCritical ? "#d32f2f" : "#FFD700"} />
+                  <Ionicons 
+                    name="star" 
+                    size={16} 
+                    color={isCritical ? "#d32f2f" : isPositive ? "#4caf50" : "#FFD700"} 
+                  />
                   <Text style={styles.reviewCount}>({starReviews.length} đánh giá)</Text>
                 </View>
 
                 {starReviews.map((review) => (
-                  <View key={review.id} style={[styles.commentCard, isCritical && styles.criticalCard]}>
+                  <View key={review.id} style={[
+                    styles.commentCard, 
+                    isPositive && styles.positiveCard,
+                    isCritical && styles.criticalCard
+                  ]}>
                     <Text style={styles.userName}>{review.user}</Text>
                     <Text style={styles.commentText}>{review.comment}</Text>
                   </View>
@@ -154,30 +201,49 @@ export default function DetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'white' },
+  container: { flex: 1, backgroundColor: '#f9f9f9' },
   imageContainer: { position: 'relative' },
   image: { width: '100%', height: 380, resizeMode: 'cover' },
   favoriteBtn: {
-    position: 'absolute', bottom: -28, right: 24,
+    position: 'absolute', bottom: -28, right: 28,
     backgroundColor: 'white', width: 56, height: 56, borderRadius: 28,
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 6,
+    zIndex: 20,
   },
   favoriteBtnActive: { backgroundColor: '#e91e63' },
-  infoSection: { padding: 20, paddingTop: 35, paddingBottom: 10 },
-  brand: { fontSize: 14, color: '#757575', textTransform: 'uppercase', fontWeight: 'bold' },
-  title: { fontSize: 24, fontWeight: 'bold', marginVertical: 6, color: '#212121' },
-  compactPrice: { fontSize: 16, color: '#e91e63', fontWeight: '600' },
   
-  feedbackSection: { padding: 20, backgroundColor: '#fff5f5', borderTopWidth: 1, borderColor: '#ffebee' },
-  feedbackTitle: { fontSize: 20, fontWeight: 'bold', color: '#d32f2f' },
-  feedbackSub: { fontSize: 13, color: '#757575', marginBottom: 20, marginTop: 4 },
+  detailsCard: { 
+    margin: 16, marginTop: -20, padding: 20, backgroundColor: 'white', borderRadius: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5, zIndex: 10
+  },
+  priceContainer: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
+  finalPrice: { fontSize: 32, fontWeight: '900', color: '#e91e63', marginRight: 12 },
+  originalPrice: { fontSize: 16, color: '#9e9e9e', textDecorationLine: 'line-through', marginRight: 10, marginBottom: 4 },
+  discountBadge: { backgroundColor: '#ffebee', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginBottom: 4 },
+  discountText: { color: '#d32f2f', fontWeight: 'bold', fontSize: 12 },
+  title: { fontSize: 20, fontWeight: '700', color: '#212121', marginBottom: 8, lineHeight: 28 },
+  brand: { fontSize: 14, color: '#757575', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '600' },
+  
+  feedbackSection: { padding: 20, marginHorizontal: 16, marginBottom: 16, backgroundColor: 'white', borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  feedbackHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  averageRatingBox: { 
+    flexDirection: 'row', alignItems: 'baseline', 
+    backgroundColor: '#fff8e1', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
+    borderWidth: 1, borderColor: '#ffecb3'
+  },
+  averageRatingText: { fontSize: 24, fontWeight: '900', color: '#f57f17' },
+  averageRatingMax: { fontSize: 14, fontWeight: 'bold', color: '#fbc02d', marginLeft: 2 },
+  feedbackTitle: { fontSize: 20, fontWeight: 'bold', color: '#212121' },
+  feedbackSub: { fontSize: 13, color: '#757575', marginTop: 2 },
   ratingGroup: { marginBottom: 20 },
   starHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', paddingBottom: 5 },
+  positiveHeader: { borderBottomColor: '#c8e6c9' },
   criticalHeader: { borderBottomColor: '#ffcdd2' },
   starHeaderText: { fontSize: 18, fontWeight: 'bold', marginRight: 4 },
   reviewCount: { fontSize: 14, color: '#757575', marginLeft: 8 },
   commentCard: { backgroundColor: 'white', padding: 12, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#eeeeee' },
+  positiveCard: { borderColor: '#c8e6c9', backgroundColor: '#f9fbe7' },
   criticalCard: { borderColor: '#ffcdd2', backgroundColor: '#fffafb' },
   userName: { fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
   commentText: { fontSize: 14, color: '#424242', lineHeight: 20 },
